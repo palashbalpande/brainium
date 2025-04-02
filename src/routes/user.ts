@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 import { validateSignupSchema } from "../middlewares/validateSignupSchema";
 import { SignupBody, userSignupSchema } from "../schemas/userSignupSchema";
+import { getJwtUserCode } from "../utils/getJwtUserCode";
 
 export const userRouter = Router();
 
@@ -35,7 +36,7 @@ userRouter.post(
   }
 );
 
-userRouter.post("/signin", async (req: Request, res: Response) => {
+userRouter.post("/signin", async (req: Request, res: Response) => { 
   const { email, password } = req.body;
 
   try {
@@ -45,25 +46,35 @@ userRouter.post("/signin", async (req: Request, res: Response) => {
       return;
     }
 
-    if (user && user.password) {
-      const isPasswordCorrect = await bcrypt.compare(password, user.password);
-      if (!isPasswordCorrect) {
-        res.status(400).json({ message: "Invalid Creds" });
-        return;
-      }
+    // if (user && user.password) {
+    //   const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    //   if (!isPasswordCorrect) {
+    //     res.status(400).json({ message: "Invalid Creds" });
+    //     return;
+    //   }
+    // }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      res.status(400).json({ message: "Invalid Creds" });
+      return;
     }
 
-    if (process.env.JWT_USER_CODE) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_USER_CODE);
-      res.json({ mesage: "Login Succeeded", token });
-    } else {
-      console.error("JWT_USER_CODE is undefined");
-      res.status(500).json({ message: "Internal Server Error" });
-    }
+    // if (process.env.JWT_USER_CODE) {
+    //   const token = jwt.sign({ id: user._id }, process.env.JWT_USER_CODE);
+    //   res.json({ mesage: "Login Succeeded", token });
+    // } else {
+    //   console.error("JWT_USER_CODE is undefined");
+    //   res.status(500).json({ message: "Internal Server Error" });
+    // }
+
+    const JWT_USER_CODE = getJwtUserCode("JWT_USER_CODE");
+    const token = jwt.sign({ id: user._id }, JWT_USER_CODE);
+    res.json({ mesage: "Login Succeeded", token });
   } catch (err) {
     console.error("Error login: ", err);
-    res.status(400).json({
-      message: "Login Failed",
+    res.status(403).json({
+      message: "Login Failed, Incorrect Creds",
       error: err instanceof Error ? err.message : "Unknown Error",
     });
   }
